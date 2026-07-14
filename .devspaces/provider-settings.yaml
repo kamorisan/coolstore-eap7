@@ -1,0 +1,15 @@
+---
+environment:
+  ALWAYS_APPLIED_KEY: "envvar to be set regardless of which model is active"
+
+models:
+  OpenAI: &active
+    environment:
+      OPENAI_API_KEY: "sk-k6yUFWReBsfsLzDmPWFn9w"
+    provider: ChatOpenAI
+    args:
+      model: gpt-oss-120b
+      configuration:
+        baseURL: https://maas-rhdp.apps.maas.redhatworkshops.io/v1
+
+active: *active
