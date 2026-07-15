@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "redhat.mta-core",
+    "redhat.java",
+    "redhat.vscode-xml"
+  ]
+}
