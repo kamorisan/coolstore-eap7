@@ -12,7 +12,7 @@ install_modules "${INJECTED_DIR}/modules"
 echo "Configuring PostgreSQL JDBC driver"
 configure_drivers "${INJECTED_DIR}/drivers.env"
 
-echo "Installing EAP custom configuration scripts"
+echo "Installing EAP post-configuration scripts"
 
 mkdir -p "${JBOSS_HOME}/extensions"
 
@@ -22,6 +22,12 @@ cp "${INJECTED_DIR}/postconfigure.sh" \
 cp "${INJECTED_DIR}/messaging.cli" \
    "${JBOSS_HOME}/extensions/messaging.cli"
 
+cp "${INJECTED_DIR}/delayedpostconfigure.sh" \
+   "${JBOSS_HOME}/extensions/delayedpostconfigure.sh"
+
 chmod +x "${JBOSS_HOME}/extensions/postconfigure.sh"
+
+echo "Installed files:"
+ls -l "${JBOSS_HOME}/extensions"
 
 echo "Custom EAP installation completed"
