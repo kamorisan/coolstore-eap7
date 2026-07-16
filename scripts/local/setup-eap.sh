@@ -2,7 +2,7 @@
 
 # スクリプトのディレクトリを取得
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-APP_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+APP_DIR="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
 EAP_HOME=/Users/kamori/vscode/developer-lightspeed/JBossEAP/jboss-eap-7.4
 POSTGRES_JAR=/Users/kamori/vscode/developer-lightspeed/JBossEAP/postgresql-42.7.3.jar
