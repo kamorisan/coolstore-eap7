@@ -12,17 +12,16 @@ install_modules "${INJECTED_DIR}/modules"
 echo "Configuring PostgreSQL JDBC driver"
 configure_drivers "${INJECTED_DIR}/drivers.env"
 
-echo "Installing JMS deployment descriptor"
+echo "Installing EAP custom configuration scripts"
 
-if [ -f "${INJECTED_DIR}/deployments/orders-jms.xml" ]; then
-    cp \
-      "${INJECTED_DIR}/deployments/orders-jms.xml" \
-      /deployments/orders-jms.xml
+mkdir -p "${JBOSS_HOME}/extensions"
 
-    echo "Installed /deployments/orders-jms.xml"
-else
-    echo "ERROR: orders-jms.xml not found"
-    exit 1
-fi
+cp "${INJECTED_DIR}/postconfigure.sh" \
+   "${JBOSS_HOME}/extensions/postconfigure.sh"
+
+cp "${INJECTED_DIR}/messaging.cli" \
+   "${JBOSS_HOME}/extensions/messaging.cli"
+
+chmod +x "${JBOSS_HOME}/extensions/postconfigure.sh"
 
 echo "Custom EAP installation completed"
