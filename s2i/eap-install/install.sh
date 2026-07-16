@@ -12,11 +12,17 @@ install_modules "${INJECTED_DIR}/modules"
 echo "Configuring PostgreSQL JDBC driver"
 configure_drivers "${INJECTED_DIR}/drivers.env"
 
-echo "Configuring JMS Topic"
-if [ -f "${INJECTED_DIR}/extensions/configure.cli" ]; then
-    mkdir -p "${JBOSS_HOME}/.s2i"
-    cp "${INJECTED_DIR}/extensions/configure.cli" "${JBOSS_HOME}/.s2i/configure.cli"
-    echo "JMS Topic configuration script copied to ${JBOSS_HOME}/.s2i/configure.cli"
+echo "Installing JMS deployment descriptor"
+
+if [ -f "${INJECTED_DIR}/deployments/orders-jms.xml" ]; then
+    cp \
+      "${INJECTED_DIR}/deployments/orders-jms.xml" \
+      /deployments/orders-jms.xml
+
+    echo "Installed /deployments/orders-jms.xml"
+else
+    echo "ERROR: orders-jms.xml not found"
+    exit 1
 fi
 
-echo "PostgreSQL JDBC driver installation completed"
+echo "Custom EAP installation completed"
