@@ -14,15 +14,14 @@ configure_drivers "${INJECTED_DIR}/drivers.env"
 
 echo "Installing EAP custom configuration scripts"
 
-mkdir -p "${JBOSS_HOME}/.s2i/bin"
 mkdir -p "${JBOSS_HOME}/extensions"
 
 cp "${INJECTED_DIR}/postconfigure.sh" \
-   "${JBOSS_HOME}/.s2i/bin/postconfigure.sh"
+   "${JBOSS_HOME}/extensions/postconfigure.sh"
 
 cp "${INJECTED_DIR}/messaging.cli" \
    "${JBOSS_HOME}/extensions/messaging.cli"
 
-chmod +x "${JBOSS_HOME}/.s2i/bin/postconfigure.sh"
+chmod +x "${JBOSS_HOME}/extensions/postconfigure.sh"
 
 echo "Custom EAP installation completed"
