@@ -1,6 +1,7 @@
 if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-topic=orders:read-resource
     /subsystem=messaging-activemq/server=default/jms-topic=orders:add(
         entries=[
+            "java:topic/orders",
             "java:/topic/orders",
             "java:jboss/exported/topic/orders"
         ]
