@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 USERNAME="$(oc whoami)"
-PROJECT_NAME="${PROJECT_NAME:-admin-dev}"
+PROJECT_NAME="${PROJECT_NAME:-user05-dev}"
 APP_NAME="${APP_NAME:-coolstore-eap7}"
 
 GIT_REPOSITORY="${GIT_REPOSITORY:-https://github.com/kamorisan/coolstore-eap7.git}"
@@ -36,28 +36,53 @@ oc project "${PROJECT_NAME}"
 
 if oc get bc "${APP_NAME}" >/dev/null 2>&1; then
     echo "BuildConfig ${APP_NAME} は既に存在します"
-else
-    oc new-build \
-        "${EAP_BUILDER_IMAGE}" \
-        --strategy=source \
-        --name="${APP_NAME}" \
-        --code="${GIT_REPOSITORY}"
-fi
+    echo "既存のBuildConfigを更新します..."
 
-oc patch bc "${APP_NAME}" \
-    --type=merge \
-    -p "{
-      \"spec\": {
-        \"source\": {
-          \"type\": \"Git\",
-          \"git\": {
-            \"uri\": \"${GIT_REPOSITORY}\",
-            \"ref\": \"${GIT_REF}\"
-          },
-          \"contextDir\": \"\"
-        }
-      }
-    }"
+    oc patch bc "${APP_NAME}" \
+        --type=merge \
+        -p "{
+          \"spec\": {
+            \"source\": {
+              \"type\": \"Git\",
+              \"git\": {
+                \"uri\": \"${GIT_REPOSITORY}\",
+                \"ref\": \"${GIT_REF}\"
+              },
+              \"contextDir\": \"\"
+            }
+          }
+        }"
+else
+    echo "新規BuildConfigを作成します..."
+
+    oc create -f - <<EOF
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: ${APP_NAME}
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: ${APP_NAME}:latest
+  source:
+    type: Git
+    git:
+      uri: ${GIT_REPOSITORY}
+      ref: ${GIT_REF}
+    contextDir: ""
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: DockerImage
+        name: ${EAP_BUILDER_IMAGE}
+  triggers: []
+EOF
+
+    echo "ImageStreamを作成します..."
+    oc create imagestream "${APP_NAME}" 2>/dev/null || echo "ImageStream already exists"
+fi
 
 oc set env bc/"${APP_NAME}" \
     CUSTOM_INSTALL_DIRECTORIES="${CUSTOM_INSTALL_DIR}"

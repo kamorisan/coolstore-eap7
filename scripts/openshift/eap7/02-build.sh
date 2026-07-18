@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PROJECT_NAME="${PROJECT_NAME:-admin-dev}"
+PROJECT_NAME="${PROJECT_NAME:-user05-dev}"
 APP_NAME="${APP_NAME:-coolstore-eap7}"
 
 echo "======================================"
@@ -21,9 +21,18 @@ if ! oc get bc "${APP_NAME}" >/dev/null 2>&1; then
     exit 1
 fi
 
+echo "ビルドを開始します..."
+set +e
 oc start-build "${APP_NAME}" \
     --follow \
     --wait
+BUILD_RC=$?
+set -e
+
+if [ ${BUILD_RC} -ne 0 ]; then
+    echo ""
+    echo "⚠ ログストリーミングでエラーが発生しましたが、ビルド状態を確認します..."
+fi
 
 LATEST_BUILD="$(
     oc get builds \
@@ -37,14 +46,20 @@ BUILD_PHASE="$(
         -o jsonpath='{.status.phase}'
 )"
 
+echo ""
 echo "Latest Build: ${LATEST_BUILD}"
 echo "Build Phase: ${BUILD_PHASE}"
 
 if [ "${BUILD_PHASE}" != "Complete" ]; then
-    echo "エラー: ビルドが成功していません"
-    oc logs "build/${LATEST_BUILD}" --tail=300 || true
+    echo ""
+    echo "✗ エラー: ビルドが成功していません"
+    echo ""
+    echo "ビルドログ（最後の50行）:"
+    oc logs "build/${LATEST_BUILD}" --tail=50 || true
     exit 1
 fi
+
+echo "✓ ビルドが正常に完了しました"
 
 if ! oc get istag "${APP_NAME}:latest" >/dev/null 2>&1; then
     echo "エラー: ImageStreamTag ${APP_NAME}:latest がありません"

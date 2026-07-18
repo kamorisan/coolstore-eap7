@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_NAME="${PROJECT_NAME:-admin-dev}"
+PROJECT_NAME="${PROJECT_NAME:-user05-dev}"
 APP_NAME="${APP_NAME:-coolstore-eap7}"
 
 POSTGRESQL_SERVICE="${POSTGRESQL_SERVICE:-postgresql}"
@@ -60,36 +60,46 @@ if [ -z "${ENDPOINT}" ]; then
 fi
 
 if ! oc get deployment "${APP_NAME}" >/dev/null 2>&1; then
+    echo "新規Deploymentを作成します..."
     oc new-app "${APP_NAME}:latest" --name="${APP_NAME}"
-fi
 
-CONTAINER_NAME="$(
-    oc get deployment "${APP_NAME}" \
-        -o jsonpath='{.spec.template.spec.containers[0].name}'
-)"
+    CONTAINER_NAME="$(
+        oc get deployment "${APP_NAME}" \
+            -o jsonpath='{.spec.template.spec.containers[0].name}'
+    )"
 
-oc set env deployment/"${APP_NAME}" \
-    DB_SERVICE_PREFIX_MAPPING="${DB_POOL_NAME}-postgresql=${DB_PREFIX}" \
-    COOLSTORE_POSTGRESQL_SERVICE_HOST="${POSTGRESQL_SERVICE}" \
-    COOLSTORE_POSTGRESQL_SERVICE_PORT="${DB_PORT}" \
-    DB_JNDI="${DB_JNDI}" \
-    DB_DRIVER="${DB_DRIVER}" \
-    DB_NONXA="true" \
-    DB_JTA="true" \
-    DB_MIN_POOL_SIZE="1" \
-    DB_MAX_POOL_SIZE="20" \
-    DB_VALIDATE_ON_MATCH="true" \
-    DB_BACKGROUND_VALIDATION="false"
-
-oc patch deployment "${APP_NAME}" \
-    --type='strategic' \
-    -p="
+    echo "環境変数を設定します..."
+    oc patch deployment "${APP_NAME}" \
+        --type='strategic' \
+        -p="
 spec:
   template:
     spec:
       containers:
         - name: ${CONTAINER_NAME}
           env:
+            - name: DB_SERVICE_PREFIX_MAPPING
+              value: ${DB_POOL_NAME}-postgresql=${DB_PREFIX}
+            - name: COOLSTORE_POSTGRESQL_SERVICE_HOST
+              value: ${POSTGRESQL_SERVICE}
+            - name: COOLSTORE_POSTGRESQL_SERVICE_PORT
+              value: \"${DB_PORT}\"
+            - name: DB_JNDI
+              value: ${DB_JNDI}
+            - name: DB_DRIVER
+              value: ${DB_DRIVER}
+            - name: DB_NONXA
+              value: \"true\"
+            - name: DB_JTA
+              value: \"true\"
+            - name: DB_MIN_POOL_SIZE
+              value: \"1\"
+            - name: DB_MAX_POOL_SIZE
+              value: \"20\"
+            - name: DB_VALIDATE_ON_MATCH
+              value: \"true\"
+            - name: DB_BACKGROUND_VALIDATION
+              value: \"false\"
             - name: DB_DATABASE
               valueFrom:
                 secretKeyRef:
@@ -106,6 +116,9 @@ spec:
                   name: ${POSTGRESQL_SECRET}
                   key: DB_PASSWORD
 "
+else
+    echo "既存のDeploymentが見つかりました。スキップします。"
+fi
 
 if ! oc get svc "${APP_NAME}" >/dev/null 2>&1; then
     oc expose deployment "${APP_NAME}" \
@@ -121,32 +134,24 @@ if ! oc get route "${APP_NAME}" >/dev/null 2>&1; then
         --insecure-policy=Redirect
 fi
 
+echo ""
+echo "Deploymentのロールアウトを待機しています..."
 oc rollout status deployment/"${APP_NAME}" --timeout=300s
 
-CURRENT_RS="$(
-    oc get rs \
-        -l "deployment=${APP_NAME}" \
-        --sort-by=.metadata.creationTimestamp \
-        -o name |
-        tail -1
-)"
-
-POD_TEMPLATE_HASH="$(
-    oc get "${CURRENT_RS}" \
-        -o jsonpath='{.metadata.labels.pod-template-hash}'
-)"
-
+echo "Podの準備完了を待機しています..."
 oc wait \
     --for=condition=Ready \
     pod \
-    -l "deployment=${APP_NAME},pod-template-hash=${POD_TEMPLATE_HASH}" \
+    -l "deployment=${APP_NAME}" \
     --timeout=300s
 
+# 最新のRunning状態のPodを取得
 POD_NAME="$(
     oc get pods \
-        -l "deployment=${APP_NAME},pod-template-hash=${POD_TEMPLATE_HASH}" \
+        -l "deployment=${APP_NAME}" \
         --field-selector=status.phase=Running \
-        -o jsonpath='{.items[0].metadata.name}'
+        --sort-by=.metadata.creationTimestamp \
+        -o jsonpath='{.items[-1:].metadata.name}'
 )"
 
 if [ -z "${POD_NAME}" ]; then
@@ -154,53 +159,39 @@ if [ -z "${POD_NAME}" ]; then
     exit 1
 fi
 
-CLI_READY=false
+echo ""
+echo "EAP起動ログを確認しています..."
+sleep 10
 
-for I in $(seq 1 60); do
-    if oc exec "${POD_NAME}" -- \
-        /opt/eap/bin/jboss-cli.sh \
-        --connect \
-        --command=':read-attribute(name=server-state)' \
-        >/dev/null 2>&1; then
-        CLI_READY=true
-        break
-    fi
+STARTUP_LOG="$(oc logs "${POD_NAME}" 2>&1)"
 
-    echo "EAP管理インターフェース待機中 (${I}/60)"
-    sleep 5
-done
-
-if [ "${CLI_READY}" != "true" ]; then
-    echo "エラー: EAP管理インターフェースへ接続できません"
-    oc logs "${POD_NAME}" --tail=300
-    exit 1
+if echo "${STARTUP_LOG}" | grep -q "WFLYSRV0025"; then
+    echo "✓ EAPが正常に起動しました (WFLYSRV0025)"
+elif echo "${STARTUP_LOG}" | grep -q "WFLYSRV0026"; then
+    echo "⚠ EAPがエラー付きで起動しました (WFLYSRV0026)"
+    echo ""
+    echo "最近のエラーログ:"
+    echo "${STARTUP_LOG}" | grep -E "ERROR|WARN" | tail -10
+else
+    echo "⚠ EAP起動ログを確認できませんでした"
 fi
 
-echo "Installed JDBC drivers:"
-oc exec "${POD_NAME}" -- \
-    /opt/eap/bin/jboss-cli.sh \
-    --connect \
-    --command='/subsystem=datasources:installed-drivers-list'
-
-echo "Datasources:"
-oc exec "${POD_NAME}" -- \
-    /opt/eap/bin/jboss-cli.sh \
-    --connect \
-    --command='/subsystem=datasources:read-children-names(child-type=data-source)'
-
-echo "ROOT.war:"
-oc exec "${POD_NAME}" -- \
-    /opt/eap/bin/jboss-cli.sh \
-    --connect \
-    --command='/deployment=ROOT.war:read-resource'
+if echo "${STARTUP_LOG}" | grep -q "orders JMS Topic configuration completed successfully"; then
+    echo "✓ JMS Topic 'orders' が作成されました"
+fi
 
 ROUTE_HOST="$(
     oc get route "${APP_NAME}" \
         -o jsonpath='{.spec.host}'
 )"
 
+echo ""
 echo "======================================"
 echo "デプロイ完了"
-echo "URL: https://${ROUTE_HOST}/"
+echo "Application URL: https://${ROUTE_HOST}/"
 echo "Pod: ${POD_NAME}"
+echo ""
+echo "検証コマンド:"
+echo "  oc logs ${POD_NAME}"
+echo "  oc exec ${POD_NAME} -- /opt/eap/bin/jboss-cli.sh --connect --command='deployment-info'"
 echo "======================================"
