@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_NAME="${PROJECT_NAME:-user05-dev}"
+PROJECT_NAME="${PROJECT_NAME:-user01-dev}"
 APP_NAME="${APP_NAME:-coolstore-eap7}"
 
 POSTGRESQL_SERVICE="${POSTGRESQL_SERVICE:-postgresql}"

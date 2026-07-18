@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 USERNAME="$(oc whoami)"
-PROJECT_NAME="${PROJECT_NAME:-user05-dev}"
+PROJECT_NAME="${PROJECT_NAME:-user01-dev}"
 APP_NAME="${APP_NAME:-coolstore-eap7}"
 
 GIT_REPOSITORY="${GIT_REPOSITORY:-https://github.com/kamorisan/coolstore-eap7.git}"
