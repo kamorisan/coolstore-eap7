@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: push-image
+spec:
+  params:
+    - name: IMAGE
+      type: string
+      description: Reference of the image to push
+    - name: NAMESPACE
+      type: string
+      description: Target namespace
+  workspaces:
+    - name: source
+      description: Workspace for buildah storage
+  steps:
+    - name: push
+      image: quay.io/buildah/stable:latest
+      workingDir: $(workspaces.source.path)
+      securityContext:
+        privileged: true
+      script: |
+        #!/bin/bash
+        set -e
+
+        echo "======================================"
+        echo "Pushing Image to Registry"
+        echo "Image: $(params.IMAGE)"
+        echo "Registry: image-registry.openshift-image-registry.svc:5000/$(params.NAMESPACE)/$(params.IMAGE)"
+        echo "======================================"
+
+        buildah push \
+          --tls-verify=false \
+          $(params.IMAGE) \
+          docker://image-registry.openshift-image-registry.svc:5000/$(params.NAMESPACE)/$(params.IMAGE):latest
+
+        echo ""
+        echo "✓ Image pushed successfully"

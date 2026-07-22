@@ -1,0 +1,54 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: build-image
+spec:
+  params:
+    - name: IMAGE
+      type: string
+      description: Complete destination image reference
+  workspaces:
+    - name: source
+      description: Workspace containing the source code
+  steps:
+    - name: build-and-push
+      image: quay.io/buildah/stable:latest
+      workingDir: $(workspaces.source.path)
+      securityContext:
+        privileged: true
+      script: |
+        #!/bin/bash
+        set -e
+
+        IMAGE="$(params.IMAGE)"
+
+        echo "======================================"
+        echo "Building Container Image"
+        echo "Image: ${IMAGE}"
+        echo "======================================"
+
+        buildah bud \
+          --format=oci \
+          --tls-verify=false \
+          --no-cache \
+          -f Containerfile \
+          -t "${IMAGE}" \
+          .
+
+        echo ""
+        echo "✓ Image built successfully"
+        buildah images
+
+        echo ""
+        echo "======================================"
+        echo "Pushing Image to Registry"
+        echo "Image: ${IMAGE}"
+        echo "======================================"
+
+        buildah push \
+          --tls-verify=false \
+          "${IMAGE}" \
+          "docker://${IMAGE}"
+
+        echo ""
+        echo "✓ Image pushed successfully"

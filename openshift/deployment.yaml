@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coolstore-eap8
+  labels:
+    app: coolstore-eap8
+    app.kubernetes.io/part-of: coolstore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coolstore-eap8
+  template:
+    metadata:
+      labels:
+        app: coolstore-eap8
+    spec:
+      containers:
+        - name: coolstore-eap8
+          image: image-registry.openshift-image-registry.svc:5000/user01-dev/coolstore-eap8:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          env:
+            - name: COOLSTORE_POSTGRESQL_SERVICE_HOST
+              value: postgresql
+            - name: COOLSTORE_POSTGRESQL_SERVICE_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: coolstore-db-secret
+                  key: DB_NAME
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: coolstore-db-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: coolstore-db-secret
+                  key: DB_PASSWORD
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coolstore-eap8
+  labels:
+    app: coolstore-eap8
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: coolstore-eap8
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: coolstore-eap8
+  labels:
+    app: coolstore-eap8
+spec:
+  to:
+    kind: Service
+    name: coolstore-eap8
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

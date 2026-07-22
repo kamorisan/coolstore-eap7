@@ -1,0 +1,5 @@
+# Orders Topic used by ShoppingCartService
+# embedded-activemq layer provides server=default and default connection factory
+if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-topic=orders:read-resource
+    /subsystem=messaging-activemq/server=default/jms-topic=orders:add(entries=["java:/topic/orders"])
+end-if

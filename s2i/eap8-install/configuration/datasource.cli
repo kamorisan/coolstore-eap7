@@ -1,0 +1,33 @@
+# PostgreSQL JDBC Driver configuration for EAP 8
+if (outcome != success) of /subsystem=datasources/jdbc-driver=postgresql:read-resource
+    /subsystem=datasources/jdbc-driver=postgresql:add( \
+        driver-name=postgresql, \
+        driver-module-name=org.postgresql, \
+        driver-class-name=org.postgresql.Driver, \
+        driver-xa-datasource-class-name=org.postgresql.xa.PGXADataSource \
+    )
+    echo Added PostgreSQL JDBC Driver
+else
+    echo PostgreSQL JDBC Driver already exists
+end-if
+
+# PostgreSQL Datasource configuration
+if (outcome != success) of /subsystem=datasources/data-source=CoolstoreDS:read-resource
+    /subsystem=datasources/data-source=CoolstoreDS:add( \
+        jndi-name=java:jboss/datasources/CoolstoreDS, \
+        driver-name=postgresql, \
+        connection-url="jdbc:postgresql://${env.COOLSTORE_POSTGRESQL_SERVICE_HOST:postgresql}:${env.COOLSTORE_POSTGRESQL_SERVICE_PORT:5432}/${env.DB_DATABASE:coolstore}", \
+        user-name=${env.DB_USERNAME:coolstore}, \
+        password=${env.DB_PASSWORD:coolstore}, \
+        min-pool-size=${env.DB_MIN_POOL_SIZE:1}, \
+        max-pool-size=${env.DB_MAX_POOL_SIZE:20}, \
+        validate-on-match=${env.DB_VALIDATE_ON_MATCH:true}, \
+        background-validation=${env.DB_BACKGROUND_VALIDATION:false}, \
+        enabled=true, \
+        use-java-context=true, \
+        jta=true \
+    )
+    echo Created CoolstoreDS datasource
+else
+    echo CoolstoreDS datasource already exists
+end-if
