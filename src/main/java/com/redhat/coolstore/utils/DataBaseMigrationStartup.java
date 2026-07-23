@@ -30,7 +30,17 @@ public class DataBaseMigrationStartup {
 
     @PostConstruct
     private void startup() {
+        String migrationSetting = System.getenv("RUN_DB_MIGRATION");
+        boolean migrationEnabled =
+                migrationSetting == null ||
+                Boolean.parseBoolean(migrationSetting);
 
+        if (!migrationEnabled) {
+            logger.info(
+                    "Database migration is disabled. "
+                    + "Using the schema initialized by OpenShift GitOps.");
+            return;
+        }
 
         try {
             logger.info("Initializing/migrating the database using FlyWay");

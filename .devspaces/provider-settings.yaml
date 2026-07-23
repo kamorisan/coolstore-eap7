@@ -5,7 +5,7 @@ environment:
 models:
   OpenAI: &active
     environment:
-      OPENAI_API_KEY: "sk-k6yUFWReBsfsLzDmPWFn9w"
+      OPENAI_API_KEY: "sk-k6yUFWReBsfsLzDmPWFn9w" # notsecret
     provider: ChatOpenAI
     args:
       model: gpt-oss-120b
