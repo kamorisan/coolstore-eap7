@@ -30,6 +30,11 @@ components:
       cpuLimit: 2000m
       mountSources: true
       sourceMapping: /projects
+      endpoints:
+        - name: che-code
+          targetPort: 3100
+          exposure: public
+          protocol: https
       volumeMounts:
         - name: m2
           path: /home/user/.m2
