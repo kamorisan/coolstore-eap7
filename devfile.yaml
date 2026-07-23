@@ -30,19 +30,10 @@ components:
       cpuLimit: 2000m
       mountSources: true
       sourceMapping: /projects
-      endpoints:
-        - name: che-code
-          targetPort: 3100
-          exposure: public
-          protocol: https
       volumeMounts:
         - name: m2
           path: /home/user/.m2
       env:
-        - name: JAVA_HOME
-          value: /usr/lib/jvm/java-21-openjdk
-        - name: PATH
-          value: /usr/lib/jvm/java-21-openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         - name: MAVEN_OPTS
           value: "-Xmx2g"
 
